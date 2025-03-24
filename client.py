@@ -16,42 +16,46 @@ def start_client():
     nickname = input("Gib deinen Nickname ein: ")
     client.sendto(f"LOGIN {nickname}".encode('utf-8'), server_address)
 
-    print("Befehle: (lookup <nickname> / message <ip> <port> / exit / list)")
+    print("Befehle: (exit / list / connect <nickname>)")
 
     while True:
         message = input()
-
-        if message.startswith("lookup"):
-            _, target = message.split()
-            client.sendto(f"LOOKUP {nickname} {target}".encode('utf-8'), server_address)
-            data, _ = client.recvfrom(1024)
-            response = data.decode('utf-8')
-
-            if response == "BUSY":
-                print("Der Nutzer ist bereits in einem Gespräch!")
-            elif response == "NOT_FOUND":
-                print("Nutzer nicht gefunden!")
-            else:
-                ip, port = response.split()
-                print(f"Verbinde mit {target} unter {ip}:{port}...")
-                client.sendto(f"REQUEST {nickname}".encode('utf-8'), (ip, int(port)))
-
-        elif message.startswith("message"):
-            _, ip, port = message.split()
-            message = input("Nachricht: ")
-            client.sendto(message.encode('utf-8'), (ip, int(port)))
         
-        elif message.startswith("list"):
+        if message.startswith("list"):
             client.sendto(f"LIST".encode('utf-8'), server_address)
             data, _ = client.recvfrom(1024)
             response = data.decode('utf-8')
             print(response)
+        
+        elif message.startswith("connect"):
+            print("1")
+            client.sendto(f"CONNECT {message.split()[1]} {nickname}".encode('utf-8'), server_address)
+            print("2")
+            p2pIp, p2pPort = client.recvfrom(1024)
+            p2p_adress = (p2pIp, p2pPort)
+            print("3")
+            p2p_Chat(client, p2p_adress)
 
         elif message == "exit":
+            client.sendto(f"EXIT {nickname}".encode('utf-8'), server_address)
             break
 
 
     client.close()
+
+def p2p_Chat(client, p2p_adress):
+    print("4")
+    print(f"Verbinde mit {p2p_adress}")
+    while True:
+        message = input()
+        client.sendto(message.encode('utf-8'), (p2p_adress))
+
+        if message == "exit":
+            break
+
+        thread = threading.Thread(target=p2p_Chat, args=(client, p2p_adress))
+        thread.start()
+    return
 
 if __name__ == "__main__":
     start_client()

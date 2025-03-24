@@ -4,9 +4,9 @@ import threading
 clients = {}  # Speichert {nickname: (IP, port)}
 connections = {}  # Speichert aktive Verbindungen {nickname1: nickname2}
 
-def handle_client(server_socket):
+def handle_client(server):
     while True:
-        data, addr = server_socket.recvfrom(1024)
+        data, addr = server.recvfrom(1024)
         message = data.decode('utf-8').split()
 
         if message[0] == "LOGIN":
@@ -14,26 +14,27 @@ def handle_client(server_socket):
             clients[nickname] = addr
             print(f"{nickname} angemeldet von {addr}")
 
-        elif message[0] == "LOOKUP":
-            sender = message[1]
-            target = message[2]
-
-            if target in connections or sender in connections:
-                server_socket.sendto("BUSY".encode('utf-8'), addr)
-            elif target in clients:
-                server_socket.sendto(f"{clients[target][0]} {clients[target][1]}".encode('utf-8'), addr)
-            else:
-                server_socket.sendto("NOT_FOUND".encode('utf-8'), addr)
-        
         elif message[0] == "LIST":
-            server_socket.sendto(str(clients).encode('utf-8'), addr)
+            server.sendto(str(clients).encode('utf-8'), addr)
+
+        elif message[0] == "CONNECT":
+            if message[1] in clients:
+                clientIp, clientPort = clients.get(message[1])
+                server.sendto(f"{clientIp} {clientPort})".encode('utf-8'), addr)
+            else:
+                server.sendto("Client doesn't exist".encode('utf-8'), addr)
+        
+
+        elif message[0] == "EXIT":
+            nickname = message[1]
+            print(f"{nickname} abgemeldet")
 
 def start_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(("0.0.0.0", 9999))
-    print("Server läuft auf Port 5000...")
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server.bind(("0.0.0.0", 9999))
+    print("Server läuft auf Port 9999...")
 
-    thread = threading.Thread(target=handle_client, args=(server_socket,))
+    thread = threading.Thread(target=handle_client, args=(server,))
     thread.start()
 
 if __name__ == "__main__":

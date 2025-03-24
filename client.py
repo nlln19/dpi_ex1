@@ -16,7 +16,7 @@ def start_client():
     nickname = input("Gib deinen Nickname ein: ")
     client.sendto(f"LOGIN {nickname}".encode('utf-8'), server_address)
 
-    print("Befehle: (exit / list / connect <nickname>)")
+    print("Befehle: (exit / list / check / connect <nickname>)")
 
     while True:
         message = input()
@@ -26,6 +26,14 @@ def start_client():
             data, _ = client.recvfrom(1024)
             response = data.decode('utf-8')
             print(response)
+        
+        elif message.startswith("check"):
+             nickname_to_check = message.split()[1]  
+             client.sendto(f"CHECK {nickname_to_check}".encode('utf-8'), server_address)
+             data, _ = client.recvfrom(1024)  
+             response = data.decode('utf-8')  
+             print(response)
+
         
         elif message.startswith("connect"):
             print("1")

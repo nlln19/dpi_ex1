@@ -17,6 +17,14 @@ def handle_client(server):
         elif message[0] == "LIST":
             server.sendto(str(clients).encode('utf-8'), addr)
 
+        elif message[0] == "CHECK":
+            targetName = message[1]
+            if targetName in clients:
+                client_info = clients[targetName]
+                server.sendto(f"Nickname: {targetName}, IP: {client_info[0]}, Port: {client_info[1]}".encode('utf-8'), addr)
+            else:
+                server.sendto(f"Nickname {targetName} wurde nicht gefunden...".encode('utf-8'), addr)
+
         elif message[0] == "CONNECT":
             if message[1] in clients:
                 clientIp, clientPort = clients.get(message[1])
@@ -39,3 +47,5 @@ def start_server():
 
 if __name__ == "__main__":
     start_server()
+
+#Momentan funktioniert die connection zwischen zwei Clients nicht...

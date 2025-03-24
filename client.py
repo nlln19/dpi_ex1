@@ -16,7 +16,7 @@ def start_client():
     nickname = input("Gib deinen Nickname ein: ")
     client.sendto(f"LOGIN {nickname}".encode('utf-8'), server_address)
 
-    print("Befehle: (lookup <nickname> / message <ip> <port> / exit")
+    print("Befehle: (lookup <nickname> / message <ip> <port> / exit / list)")
 
     while True:
         message = input()

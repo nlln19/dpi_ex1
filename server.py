@@ -1,51 +1,117 @@
 import socket
-import threading
+import argparse
 
-clients = {}  # Speichert {nickname: (IP, port)}
-connections = {}  # Speichert aktive Verbindungen {nickname1: nickname2}
+class ChatServer:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.clients = {}  # Format: {"nickname": (ip, port)}
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind((host, port))
+        self.running = True
 
-def handle_client(server):
-    while True:
-        data, addr = server.recvfrom(1024)
-        message = data.decode('utf-8').split()
+    def run(self):
+        print("Server running.")
+        while self.running:
+            try:
+                msg, (ip, port) = self.socket.recvfrom(1024)
+                msg = msg.decode('utf-8').split()
 
-        if message[0] == "LOGIN":
-            nickname = message[1]
-            clients[nickname] = addr
-            print(f"{nickname} angemeldet von {addr}")
+                if not msg:
+                    continue
 
-        elif message[0] == "LIST":
-            server.sendto(str(clients).encode('utf-8'), addr)
+                if (ip, port) not in self.clients.values():
+                    if msg[0] not in self.clients:
+                        self.clients[msg[0]] = (ip, port)
+                        self.socket.sendto("Connected.".encode('utf-8'), (ip, port))
+                        print(f"{msg[0]} joined.")
+                    else:
+                        self.socket.sendto("invalidUsername".encode('utf-8'), (ip, port))
 
-        elif message[0] == "CHECK":
-            targetName = message[1]
-            if targetName in clients:
-                client_info = clients[targetName]
-                server.sendto(f"Nickname: {targetName}, IP: {client_info[0]}, Port: {client_info[1]}".encode('utf-8'), addr)
-            else:
-                server.sendto(f"Nickname {targetName} wurde nicht gefunden...".encode('utf-8'), addr)
+                elif msg[0] == "start" and len(msg) == 3:
+                    if msg[1] in self.clients:
+                        target_ip, target_port = self.clients[msg[1]]
+                        self.socket.sendto(f"request_chat {msg[2]}".encode('utf-8'), (target_ip, target_port))
+                    else:
+                        self.socket.sendto("User not found.".encode('utf-8'), (ip, port))
 
-        elif message[0] == "CONNECT":
-            if message[1] in clients:
-                clientIp, clientPort = clients.get(message[1])
-                server.sendto(f"{clientIp} {clientPort})".encode('utf-8'), addr)
-            else:
-                server.sendto("Client doesn't exist".encode('utf-8'), addr)
-        
+                elif msg[0] == "list":
+                    if len(self.clients) > 1:
+                        online_users = ", ".join(list(self.clients.keys()))
+                        self.socket.sendto(f"Online users: {online_users}".encode('utf-8'), (ip, port))
+                    else:
+                        self.socket.sendto("No other users online".encode('utf-8'), (ip, port))
 
-        elif message[0] == "EXIT":
-            nickname = message[1]
-            print(f"{nickname} abgemeldet")
+                elif msg[0] == "check" and len(msg) == 2:
+                    if msg[1] in self.clients:
+                        target_ip, target_port = self.clients[msg[1]]
+                        self.socket.sendto(f"User {msg[1]} - IP: {target_ip}, Port: {target_port}".encode('utf-8'), (ip, port))
+                    else:
+                        self.socket.sendto("User not found.".encode('utf-8'), (ip, port))
 
-def start_server():
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server.bind(("0.0.0.0", 9999))
-    print("Server läuft auf Port 9999...")
+                elif msg[0] == "busy" and len(msg) == 2:
+                    if msg[1] in self.clients:
+                        target_ip, target_port = self.clients[msg[1]]
+                        self.socket.sendto("User busy.".encode('utf-8'), (target_ip, target_port))
 
-    thread = threading.Thread(target=handle_client, args=(server,))
-    thread.start()
+                elif msg[0] == "ok" and len(msg) == 3:
+                    if msg[1] in self.clients:
+                        target_ip, target_port = self.clients[msg[1]]
+                        self.socket.sendto(f"accept_chat {target_ip} {target_port} {msg[1]}".encode('utf-8'), (ip, port))
+                        self.socket.sendto(f"accept_chat {ip} {port} {msg[2]}".encode('utf-8'), (target_ip, target_port))
+                        print(f"{msg[1]} and {msg[2]} are now chatting.")
+
+                elif msg[0] == "no" and len(msg) == 2:
+                    if msg[1] in self.clients:
+                        target_ip, target_port = self.clients[msg[1]]
+                        self.socket.sendto("Request denied.".encode('utf-8'), (target_ip, target_port))
+
+                elif msg[0] == "free" and len(msg) == 3:
+                    print(f"{msg[1]} and {msg[2]} are now free.")
+
+                elif msg[0] == "bye" and len(msg) == 2:
+                    if msg[1] in self.clients:
+                        del self.clients[msg[1]]
+                        print(f"{msg[1]} left.")
+
+                
+                elif msg[0] == "exit" and len(msg) == 2:
+                    try:
+                        if msg[1] in self.clients:
+                            del self.clients[msg[1]]
+                            print(f"{msg[1]} left.")
+                    except ConnectionResetError:
+                        print(msg[1] + " disconnected.")
+                        continue
+
+            # Server Absturz handlen
+            except ConnectionResetError:
+                print("Client disconnected abruptly.")
+                continue
+            except OSError as e:
+                if not self.running:
+                    break
+                print(f"Socket error: {e}")
+                continue
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                continue
+
+    def shutdown(self):
+        self.running = False
+        self.socket.close()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8989)
+    parser.add_argument("--ip", default="localhost")
+    args = parser.parse_args()
+    server = ChatServer(args.ip, args.port)
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        server.shutdown()
 
 if __name__ == "__main__":
-    start_server()
-
-#Momentan funktioniert die connection zwischen zwei Clients nicht...
+    main()

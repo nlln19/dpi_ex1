@@ -5,7 +5,7 @@ class ChatServer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.clients = {}  # Format: {"nickname": (ip, port)}
+        self.clients = {}
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((host, port))
         self.running = True
@@ -21,7 +21,7 @@ class ChatServer:
                     continue
 
                 if (ip, port) not in self.clients.values():
-                    if msg[0] not in self.clients:
+                    if msg[0] not in self.clients and msg[0] != "bye":
                         self.clients[msg[0]] = (ip, port)
                         self.socket.sendto("Connected.".encode('utf-8'), (ip, port))
                         print(f"{msg[0]} joined.")

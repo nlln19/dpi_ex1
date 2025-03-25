@@ -102,9 +102,11 @@ class ChatClient:
                     else:
                         while not self.input_queue.empty():
                             self.input_queue.get()
-                        choice = input(f"Accept chat with {msg[1]}? (y/n): ").strip().lower()
+                        print(f"Accept chat with {msg[1]}? (y/n): ", end="", flush=True)
+                        choice = self.input_queue.get()
                         while choice not in ["y", "n"]:
-                            choice = input("Invalid input. Accept? (y/n): ").strip().lower()
+                            print("Invalid input. Accept? (y/n): ", end="", flush=True)
+                            choice = self.input_queue.get()
                         if choice == "y":
                             self.socket.sendto(f"ok {msg[1]} {self.name}".encode('utf-8'), (self.server_ip, self.server_port))
                         else:

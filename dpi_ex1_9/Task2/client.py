@@ -60,6 +60,7 @@ class ChatClient:
                     elif parts[0] == "/check" and len(parts) == 2:
                         self.socket.sendto(f"check {parts[1]}".encode('utf-8'), (self.server_ip, self.server_port))
 
+                #peer to peer commands
                 else:
                     if parts[0] == "/end" and len(parts) == 1:
                         self.in_chat = False
@@ -69,7 +70,7 @@ class ChatClient:
                     elif parts[0] == "/start" and len(parts) == 2:
                         print("End current chat first.")
                     else:
-                        self.socket.sendto(f"{self.name}: {cmd}".encode('utf-8'), (self.partner_ip, self.partner_port))
+                        self.socket.sendto(f"{self.name}: {cmd}".encode('utf-8'), (self.partner_ip, self.partner_port)) #peer-to-peer message
             except (KeyboardInterrupt, EOFError):
                 self.running = False
                 break

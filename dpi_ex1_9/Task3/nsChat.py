@@ -22,15 +22,18 @@ class PeerToPeerChat:
         threading.Thread(target=self.listen_for_broadcasts, daemon=True).start()
         threading.Thread(target=self.listen_for_messages, daemon=True).start()
         
+        #sendet nachrichten an das gesamte netzwerk 255.255.255.255:8989
     def broadcast(self, message):
         self.broadcast_socket.sendto(message.encode(), (self.broadcast_ip, self.port))
         
+        #sendet nachricht an peer
     def send_direct(self, peer_nick, message):
         if peer_nick in self.peers:
             self.direct_socket.sendto(message.encode(), self.peers[peer_nick])
         else:
             print("[Peer not found]")
         
+        #listened auf broadcast messages
     def listen_for_broadcasts(self):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as temp_socket:
             temp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -59,6 +62,7 @@ class PeerToPeerChat:
                         break
                     continue
                 
+    #listened auf direct messages von peers
     def listen_for_messages(self):
         while self.running:
             try:
@@ -103,7 +107,8 @@ class PeerToPeerChat:
                 if not self.running:
                     break
                 continue
-    
+
+    #input vom user handlen
     def start(self):
         self.broadcast(f"HELLO {self.nickname} {self.direct_port}")
         

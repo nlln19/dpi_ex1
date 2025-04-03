@@ -5,7 +5,7 @@ class ChatServer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.clients = {}
+        self.clients = {} #nickname: (ip, port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((host, port))
         self.running = True

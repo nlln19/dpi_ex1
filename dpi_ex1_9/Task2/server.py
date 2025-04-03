@@ -21,7 +21,7 @@ class ChatServer:
                     continue
 
                 if (ip, port) not in self.clients.values():
-                    if msg[0] not in self.clients and msg[0] != "bye":
+                    if msg[0] not in self.clients and msg[0] != "bye" and msg[0] != "free":
                         self.clients[msg[0]] = (ip, port)
                         self.socket.sendto("Connected.".encode('utf-8'), (ip, port))
                         print(f"{msg[0]} joined.")
